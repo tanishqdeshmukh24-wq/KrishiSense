@@ -1,0 +1,10 @@
+bacterial_spot
+early_blight
+healthy
+late_blight
+leaf_mold
+septoria_leaf_spot
+spider_mites_two_spotted_spider_mite
+target_spot
+tomato_mosaic_virus
+tomato_yellow_leaf_curl_virus
