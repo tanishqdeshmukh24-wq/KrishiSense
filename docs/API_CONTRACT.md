@@ -1,9 +1,6 @@
 # KrishiSense API Contract
 
-This document defines the shared interfaces between the mobile app, backend, AI/decision components and hardware integration. Do not create conflicting endpoints without agreement.
-
-## Base
-The backend owns the public API. Exact host/port is environment-specific.
+This document defines the shared interfaces between the mobile app, backend, AI/decision components and hardware integration.
 
 ## Health
 `GET /health`
@@ -13,110 +10,127 @@ Response:
 {"status":"ok"}
 ```
 
-## Sensor Reading
-`POST /sensor/readings`
+## Authentication
+`POST /auth/register` with JSON body `name`, `email`, `password`.
 
-Request:
+`POST /auth/login` with `email` and `password`.
+
+Response:
 ```json
-{
-  "node_id": "NODE_001",
-  "zone_id": "ZONE_001",
-  "soil_moisture": 24.5,
-  "timestamp": "2026-09-14T10:30:00"
-}
+{"access_token":"<JWT>","token_type":"bearer"}
 ```
 
-The backend validates the node/zone relationship and stores the reading.
+Protected routes use `Authorization: Bearer <JWT>`.
 
-## Sensor History
-`GET /sensor/readings/{node_id}`
+`GET /auth/me` returns the authenticated user.
 
-Returns stored readings ordered by timestamp.
+## Farms, fields and zones
+`POST /farms`, `GET /farms`
+
+`POST /farms/{farm_id}/fields`, `GET /farms/{farm_id}/fields`
+
+`POST /farms/{farm_id}/fields/{field_id}/zones`, `GET /farms/{farm_id}/fields/{field_id}/zones`
+
+Ownership is checked through `User → Farm → Field → Zone`.
+
+## Crops
+`POST /crops`
+
+```json
+{"zone_id":"<uuid>","name":"Tomato","growth_stage":"Vegetative"}
+```
+
+`PUT /crops/{crop_id}` and `GET /crops` are available. Crop names are data, not hardcoded constants.
 
 ## Nodes
 `POST /nodes`
 
-Minimum conceptual fields:
-- node_id
-- device_id
-- farm_id
-- field_id
-- zone_id
-
-`GET /nodes`
-
-`GET /nodes/{node_id}`
-
-A node also exposes status/last_seen information.
-
-## Node Heartbeat
-The ESP32 periodically reports that it is alive. The backend updates `last_seen` and derives online/offline status using a configurable timeout.
-
-## AI Analysis
-The mobile app sends an image through the backend. The AI component returns a result conceptually shaped as:
-
 ```json
 {
-  "prediction": "Example Class",
-  "confidence": 0.87,
-  "explanation": "AI-assisted visual analysis.",
-  "recommendation": "Inspect the affected plant and follow appropriate crop-management guidance."
+  "node_id":"NODE_001",
+  "device_id":"ESP32-001",
+  "farm_id":"<uuid>",
+  "field_id":"<uuid>",
+  "zone_id":"<uuid>"
 }
 ```
 
-AI results are advisory, not guaranteed diagnosis.
+`GET /nodes` and `GET /nodes/{node_id}`.
 
-## Decision Engine
-Backend sends available zone/crop/sensor context to the decision engine.
+Node status uses `last_seen` and the configurable `NODE_OFFLINE_TIMEOUT_SECONDS` timeout.
 
-Expected result:
+## Sensor readings
+`POST /sensor/readings`
 
 ```json
 {
-  "decision": "IRRIGATE",
-  "priority": "HIGH",
-  "reason": "Soil moisture is below the configured threshold."
+  "node_id":"NODE_001",
+  "zone_id":"<uuid>",
+  "soil_moisture":24.5,
+  "timestamp":"2026-09-14T10:30:00"
 }
 ```
 
-Valid decisions:
+The backend validates node existence, node/zone relationship, soil-moisture range `0..100`, and timestamp format. A valid reading updates `last_seen` and marks the node online.
+
+`GET /sensor/readings/{node_id}` returns stored readings newest first.
+
+## AI results
+`POST /ai/results`
+
+```json
+{
+  "zone_id":"<uuid>",
+  "prediction":"Early Blight",
+  "confidence":0.87,
+  "explanation":"AI-assisted visual analysis.",
+  "recommendation":"Inspect the affected plant."
+}
+```
+
+`GET /ai/results` retrieves stored results. The AI model itself is owned by Tanishq.
+
+## Recommendations
+`POST /recommendations`
+
+```json
+{
+  "zone_id":"<uuid>",
+  "type":"IRRIGATION",
+  "priority":"HIGH",
+  "message":"Soil moisture is below the configured threshold.",
+  "source":"DECISION_ENGINE"
+}
+```
+
+`GET /recommendations` retrieves stored recommendations.
+
+## Alerts
+`POST /alerts`
+
+```json
+{
+  "zone_id":"<uuid>",
+  "type":"LOW_SOIL_MOISTURE",
+  "message":"Soil moisture alert.",
+  "severity":"HIGH"
+}
+```
+
+`GET /alerts` retrieves alerts visible to the authenticated farmer.
+
+## Decision-engine boundary
+`POST /decision-engine/evaluate` defines the integration boundary and accepts zone/sensor/crop context. The core backend does not implement agronomic decision logic. The external engine returns one of:
+
 - `IRRIGATE`
 - `WAIT`
 - `INSUFFICIENT_DATA`
 
-## Recommendations
-Recommendations are stored by the backend and served to the mobile app. Example:
-
-```json
-{
-  "zone_id": "ZONE_001",
-  "type": "IRRIGATION",
-  "priority": "HIGH",
-  "message": "Soil moisture is below the configured threshold.",
-  "source": "DECISION_ENGINE"
-}
-```
-
-## Hardware Command Boundary
-The decision engine never calls ESP32 directly.
+## Hardware boundary
+The decision engine and mobile app do not call ESP32 directly. The intended path is:
 
 ```text
 Decision Engine → Backend → Hardware Integration → ESP32
 ```
 
-An irrigation command may conceptually contain:
-
-```json
-{
-  "command": "IRRIGATE",
-  "zone_id": "ZONE_001"
-}
-```
-
-Hardware integration owns validation, acknowledgement, timeout and safe execution.
-
-## Error Principles
-APIs should return clear validation/authentication/server errors. Clients must handle missing data, network failure and stale readings.
-
-## Contract Rule
-If an endpoint or payload needs to change, update this document and coordinate the affected component owners before implementing the change.
+Hardware communication and safe execution remain owned by AdiKul.
