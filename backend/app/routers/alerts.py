@@ -1,7 +1,7 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field as PydanticField
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -13,9 +13,9 @@ router = APIRouter(prefix="/alerts", tags=["alerts"])
 
 class AlertCreate(BaseModel):
     zone_id: UUID | None = None
-    type: str = Field(min_length=1, max_length=50)
-    message: str = Field(min_length=1)
-    severity: str = Field(default="INFO", min_length=1, max_length=20)
+    type: str = PydanticField(min_length=1, max_length=50)
+    message: str = PydanticField(min_length=1)
+    severity: str = PydanticField(default="INFO", min_length=1, max_length=20)
 
 
 class AlertResponse(BaseModel):

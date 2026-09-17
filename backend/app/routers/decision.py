@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Farm, Field, Recommendation, SensorNode, SensorReading, Zone
+from app.models import Farm, Field as DBField, Recommendation, SensorNode, SensorReading, Zone
 from app.routers.auth import get_current_user
 
 router = APIRouter(prefix="/decision-engine", tags=["decision-engine"])
@@ -28,8 +28,8 @@ class DecisionResponse(BaseModel):
 def owned_zone(db: Session, user_id: UUID, zone_id: UUID) -> Zone:
     zone = (
         db.query(Zone)
-        .join(Field, Zone.field_id == Field.id)
-        .join(Farm, Field.farm_id == Farm.id)
+        .join(DBField, Zone.field_id == DBField.id)
+        .join(Farm, DBField.farm_id == Farm.id)
         .filter(Zone.id == zone_id, Farm.owner_id == user_id)
         .first()
     )
