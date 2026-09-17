@@ -3,8 +3,10 @@ from fastapi import FastAPI
 from app.config import get_settings
 from app.database import Base, engine
 from app import models  # noqa: F401
+from app.routers.ai import router as ai_router
 from app.routers.auth import router as auth_router
 from app.routers.crop import router as crop_router
+from app.routers.decision import router as decision_router
 from app.routers.farm import router as farm_router
 from app.routers.recommendation import router as recommendation_router
 from app.routers.sensor import router as sensor_router
@@ -24,7 +26,9 @@ def health() -> dict[str, str]:
 
 
 app.include_router(auth_router)
+app.include_router(ai_router)
 app.include_router(crop_router)
+app.include_router(decision_router)
 app.include_router(farm_router)
 app.include_router(sensor_router)
 app.include_router(recommendation_router)
