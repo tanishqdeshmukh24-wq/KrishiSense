@@ -4,6 +4,7 @@ from app.config import get_settings
 from app.database import Base, engine
 from app import models  # noqa: F401
 from app.routers.ai import router as ai_router
+from app.routers.alerts import router as alerts_router
 from app.routers.auth import router as auth_router
 from app.routers.crop import router as crop_router
 from app.routers.decision import router as decision_router
@@ -27,6 +28,7 @@ def health() -> dict[str, str]:
 
 app.include_router(auth_router)
 app.include_router(ai_router)
+app.include_router(alerts_router)
 app.include_router(crop_router)
 app.include_router(decision_router)
 app.include_router(farm_router)
