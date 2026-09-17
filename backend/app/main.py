@@ -5,6 +5,7 @@ from app.database import Base, engine
 from app import models  # noqa: F401
 from app.routers.auth import router as auth_router
 from app.routers.farm import router as farm_router
+from app.routers.sensor import router as sensor_router
 
 settings = get_settings()
 app = FastAPI(title=settings.app_name)
@@ -22,3 +23,4 @@ def health() -> dict[str, str]:
 
 app.include_router(auth_router)
 app.include_router(farm_router)
+app.include_router(sensor_router)
