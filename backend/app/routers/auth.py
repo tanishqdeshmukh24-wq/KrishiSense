@@ -1,7 +1,8 @@
 from datetime import datetime, timedelta
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import OAuth2PasswordBearer,OAuth2PasswordRequestForm
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
@@ -33,10 +34,11 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         user_id = payload.get("sub")
         if not user_id:
             raise credentials_error
-    except JWTError as exc:
-        raise credentials_error from exc
+        user_uuid=UUID(user_id)
+    except(JWTError , ValueError):
+        raise credentials_error 
 
-    user = db.get(User, user_id)
+    user = db.get(User, user_uuid)
     if not user:
         raise credentials_error
     return user
@@ -54,9 +56,9 @@ def register(payload: UserCreate, db: Session = Depends(get_db)):
 
 
 @router.post("/login")
-def login(  form_data: OAuth2PasswordRequestForm =Depends(), db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == email).first()
-    if not user or not pwd_context.verify(password, user.password_hash):
+def login(form_data: OAuth2PasswordRequestForm =Depends(), db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == form_data.username).first()
+    if not user or not pwd_context.verify(form_data.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid email or password")
     return {"access_token": create_token(user), "token_type": "bearer"}
 

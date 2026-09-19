@@ -26,6 +26,9 @@ ai/data/*
 # Logs
 *.log
 
+#Local databases
+*.db
+
 # IDE
 .vscode/
 .idea/
