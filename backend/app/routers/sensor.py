@@ -65,8 +65,11 @@ def create_node(
 
 
 @router.get("/nodes", response_model=list[NodeResponse])
-def list_nodes(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    return db.query(SensorNode).join(Farm, SensorNode.farm_id == Farm.id).filter(Farm.owner_id == current_user.id).all()
+def list_nodes( zone_id: UUID | None =None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    query=( db.query(SensorNode).join(Farm, SensorNode.farm_id == Farm.id).filter(Farm.owner_id == current_user.id))
+    if zone_id is not None:
+     query = query.filter(SensorNode.zone_id == zone_id)
+    return query.all()
 
 
 @router.get("/nodes/{node_id}", response_model=NodeResponse)
@@ -112,21 +115,71 @@ def create_sensor_reading(payload: SensorReadingCreate, db: Session = Depends(ge
 
 
 @router.get("/sensor/readings/{node_id}", response_model=list[SensorReadingResponse])
-def sensor_history(node_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def sensor_history(
+    node_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     node = (
         db.query(SensorNode)
         .join(Farm, SensorNode.farm_id == Farm.id)
-        .filter(SensorNode.node_id == node_id, Farm.owner_id == current_user.id)
+        .filter(
+            SensorNode.node_id == node_id,
+            Farm.owner_id == current_user.id,
+        )
         .first()
     )
+
     if not node:
         raise HTTPException(status_code=404, detail="Node not found")
-    return db.query(SensorReading).filter(SensorReading.node_id == node.id).order_by(SensorReading.timestamp.desc()).all()
+
+    return (
+        db.query(SensorReading)
+        .filter(SensorReading.node_id == node.id)
+        .order_by(SensorReading.timestamp.desc())
+        .all()
+    )
 
 
-def update_node_status(node: SensorNode) -> None:
-    if node.last_seen is None:
-        node.status = "OFFLINE"
-        return
-    elapsed = (datetime.utcnow() - node.last_seen).total_seconds()
-    node.status = "ONLINE" if elapsed <= settings.node_offline_timeout_seconds else "OFFLINE"
+@router.get(
+    "/sensor/readings/{node_id}/latest",
+    response_model=SensorReadingResponse,
+)
+def latest_sensor_reading(
+    node_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    node = (
+        db.query(SensorNode)
+        .join(Farm, SensorNode.farm_id == Farm.id)
+        .filter(
+            SensorNode.node_id == node_id,
+            Farm.owner_id == current_user.id,
+        )
+        .first()
+    )
+
+    if not node:
+        raise HTTPException(status_code=404, detail="Node not found")
+
+    reading = (
+        db.query(SensorReading)
+        .filter(SensorReading.node_id == node.id)
+        .order_by(SensorReading.timestamp.desc())
+        .first()
+    )
+
+    if not reading:
+        raise HTTPException(
+            status_code=404,
+            detail="No sensor readings found",
+        )
+
+    return {
+        "id": reading.id,
+        "node_id": node.node_id,
+        "zone_id": reading.zone_id,
+        "soil_moisture": reading.soil_moisture,
+        "timestamp": reading.timestamp,
+    }

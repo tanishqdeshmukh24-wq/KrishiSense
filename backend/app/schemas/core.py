@@ -110,7 +110,7 @@ class SensorReadingResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
-    node_id: UUID
+    node_id: str
     zone_id: UUID
     soil_moisture: float
     timestamp: datetime
