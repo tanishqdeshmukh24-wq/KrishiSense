@@ -1,0 +1,21 @@
+{
+  "appName": "KrishiSense",
+  "tagline": "स्मार्ट खेत • स्वस्थ फसल",
+  "goodEveningFarmer": "शुभ संध्या, किसान 🌱",
+  "farmStatusMessage": "आज आपके खेत में क्या हो रहा है, यहाँ देखें।",
+  "soilMoisture": "मिट्टी की नमी",
+  "optimal": "उत्तम",
+  "fieldZone": "खेत 1 • ज़ोन A1",
+  "lastUpdated": "अभी अपडेट किया गया",
+  "prototypeFarm": "प्रोटोटाइप फार्म",
+  "home": "होम",
+  "farm": "खेत",
+  "sensors": "सेंसर",
+  "profile": "प्रोफ़ाइल",
+  "language": "भाषा",
+  "chooseLanguage": "अपनी भाषा चुनें",
+  "selectLanguageDescription": "KrishiSense के लिए भाषा चुनें।",
+  "english": "अंग्रेज़ी",
+  "hindi": "हिन्दी",
+  "marathi": "मराठी"
+}

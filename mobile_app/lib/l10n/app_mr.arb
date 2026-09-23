@@ -1,0 +1,21 @@
+{
+  "appName": "KrishiSense",
+  "tagline": "स्मार्ट शेती • निरोगी पिके",
+  "goodEveningFarmer": "शुभ संध्याकाळ, शेतकरी 🌱",
+  "farmStatusMessage": "आज तुमच्या शेतात काय घडत आहे ते येथे पहा.",
+  "soilMoisture": "मातीतील ओलावा",
+  "optimal": "योग्य",
+  "fieldZone": "शेत १ • झोन A1",
+  "lastUpdated": "आत्ताच अपडेट केले",
+  "prototypeFarm": "प्रोटोटाइप फार्म",
+  "home": "होम",
+  "farm": "शेत",
+  "sensors": "सेन्सर्स",
+  "profile": "प्रोफाइल",
+  "language": "भाषा",
+  "chooseLanguage": "तुमची भाषा निवडा",
+  "selectLanguageDescription": "KrishiSense साठी भाषा निवडा.",
+  "english": "इंग्रजी",
+  "hindi": "हिंदी",
+  "marathi": "मराठी"
+}

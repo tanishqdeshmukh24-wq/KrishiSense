@@ -1,0 +1,1 @@
+import 'package:flutter/material.dart'; class AppColors { static const Color primaryGreen = Color(0xFF073D32); static const Color accentGreen = Color(0xFF239447); static const Color background = Color(0xFFF7FAF5); static const Color secondaryText = Color(0xFF526B70); static const Color white = Colors.white; }
