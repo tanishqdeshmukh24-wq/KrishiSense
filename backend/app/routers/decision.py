@@ -56,9 +56,6 @@ def evaluate_decision(
         )
         moisture = latest.soil_moisture if latest else None
 
-    if moisture is None:
-        return DecisionResponse(decision="INSUFFICIENT_DATA", priority="MEDIUM", reason="No soil-moisture reading is available for this zone.")
-
     engine_payload = {
         "soil_moisture": moisture,
         "crop": payload.crop,
