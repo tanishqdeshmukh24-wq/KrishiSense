@@ -51,3 +51,24 @@ Expected response:
 ```
 
 The SQLite database file is created automatically on application startup. Do not commit `.env` or generated database files.
+
+## Running with the Decision Engine
+
+From the repository root, install the repository package once so the root-level decision_engine package is importable by the backend:
+
+```powershell
+python -m pip install -e .
+```
+
+Then start the backend:
+
+```powershell
+cd backend
+uvicorn app.main:app --reload
+```
+
+Swagger UI:
+
+```text
+http://127.0.0.1:8000/docs
+```
