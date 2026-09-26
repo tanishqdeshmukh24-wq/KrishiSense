@@ -111,7 +111,14 @@ def create_sensor_reading(payload: SensorReadingCreate, db: Session = Depends(ge
     db.add(reading)
     db.commit()
     db.refresh(reading)
-    return reading
+
+    return {
+        "id": reading.id,
+        "node_id": node.node_id,
+        "zone_id": reading.zone_id,
+        "soil_moisture": reading.soil_moisture,
+        "timestamp": reading.timestamp,
+    }
 
 
 @router.get("/sensor/readings/{node_id}", response_model=list[SensorReadingResponse])
