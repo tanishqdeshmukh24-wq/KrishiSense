@@ -1,0 +1,21 @@
+{
+  "appName": "KrishiSense",
+  "tagline": "Smarter Farms • Healthier Harvests",
+  "goodEveningFarmer": "Good evening, Farmer 🌱",
+  "farmStatusMessage": "Here’s what’s happening on your farm today.",
+  "soilMoisture": "Soil Moisture",
+  "optimal": "Optimal",
+  "fieldZone": "Field 1 • Zone A1",
+  "lastUpdated": "Last updated just now",
+  "prototypeFarm": "Prototype Farm",
+  "home": "Home",
+  "farm": "Farm",
+  "sensors": "Sensors",
+  "profile": "Profile",
+  "language": "Language",
+  "chooseLanguage": "Choose your language",
+  "selectLanguageDescription": "Select a language for KrishiSense.",
+  "english": "English",
+  "hindi": "Hindi",
+  "marathi": "Marathi"
+}

@@ -1,0 +1,36 @@
+name: krishisense_mobile
+description: Farmer-facing mobile application for KrishiSense SIH26180.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+  flutter: '>=3.16.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  flutter_localizations:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  go_router: ^14.2.7
+  http: ^1.2.2
+  image_picker: ^1.1.2
+  image: ^4.5.4
+  tflite_flutter:
+    path: tflite_flutter_local
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  generate: true
+
+  assets:
+    - assets/images/
+    - assets/ai/krishisense_tomato_final.tflite
+    - assets/ai/krishisense_tomato_classes.txt
