@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Farm, Field as DBField, Recommendation, SensorNode, SensorReading, Zone
 from app.routers.auth import get_current_user
+from decision_engine.service import evaluate_decision as run_decision_engine
 
 router = APIRouter(prefix="/decision-engine", tags=["decision-engine"])
 
@@ -58,5 +59,10 @@ def evaluate_decision(
     if moisture is None:
         return DecisionResponse(decision="INSUFFICIENT_DATA", priority="MEDIUM", reason="No soil-moisture reading is available for this zone.")
 
-    # The decision engine owns agronomic logic. This endpoint only defines the stable backend boundary.
-    raise HTTPException(status_code=501, detail="Decision engine implementation is owned by Tanishq and is not implemented in the core backend")
+    engine_payload = {
+        "soil_moisture": moisture,
+        "crop": payload.crop,
+        "growth_stage": payload.growth_stage,
+    }
+    result = run_decision_engine(engine_payload)
+    return DecisionResponse(**result)
