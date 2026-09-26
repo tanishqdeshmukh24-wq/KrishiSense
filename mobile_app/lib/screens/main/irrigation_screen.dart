@@ -1,14 +1,60 @@
 import 'package:flutter/material.dart';
 
+import '../../data/models/decision_result_model.dart';
+import '../../data/services/decision_service.dart';
+
 class IrrigationScreen extends StatefulWidget {
-  const IrrigationScreen({super.key});
+  final String? zoneId;
+  final String? accessToken;
+  final String crop;
+  final String growthStage;
+
+  const IrrigationScreen({
+    super.key,
+    this.zoneId,
+    this.accessToken,
+    this.crop = 'tomato',
+    this.growthStage = 'flowering',
+  });
 
   @override
   State<IrrigationScreen> createState() => _IrrigationScreenState();
 }
 
 class _IrrigationScreenState extends State<IrrigationScreen> {
-  bool _mockIrrigationEnabled = false;
+  DecisionResultModel? _decision;
+  String? _error;
+  bool _loading = false;
+
+  Future<void> _checkDecision() async {
+    if (widget.zoneId == null || widget.zoneId!.isEmpty) {
+      setState(() => _error = 'No zone is connected to this irrigation view.');
+      return;
+    }
+
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      final result = await DecisionService(
+        accessToken: widget.accessToken,
+      ).evaluate(
+        zoneId: widget.zoneId!,
+        crop: widget.crop,
+        growthStage: widget.growthStage,
+      );
+      if (!mounted) return;
+      setState(() => _decision = result);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (!mounted) return;
+      setState(() => _loading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -59,38 +105,24 @@ class _IrrigationScreenState extends State<IrrigationScreen> {
           Card(
             child: Padding(
               padding: const EdgeInsets.all(18),
-              child: Row(
-                children: [
-                  const CircleAvatar(
-                    radius: 25,
-                    backgroundColor: Color(0xFFE8F4EA),
-                    child: Icon(
-                      Icons.check_circle_outline,
-                      color: Color(0xFF239447),
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'No Irrigation Required',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Soil moisture is currently within the optimal range.',
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+              child: _buildDecisionCard(),
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: _loading ? null : _checkDecision,
+              icon: _loading
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.auto_awesome),
+              label: Text(_loading ? 'Checking...' : 'Check Decision'),
             ),
           ),
 
@@ -152,6 +184,55 @@ class _IrrigationScreenState extends State<IrrigationScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildDecisionCard() {
+    if (_error != null) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.error_outline, color: Color(0xFFC94A4A)),
+          const SizedBox(width: 12),
+          Expanded(child: Text(_error!)),
+        ],
+      );
+    }
+
+    final decision = _decision;
+    if (decision == null) {
+      return Text(
+        'Check the latest irrigation decision from the backend.',
+        style: Theme.of(context).textTheme.bodyMedium,
+      );
+    }
+
+    final irrigate = decision.decision == 'IRRIGATE';
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        CircleAvatar(
+          radius: 25,
+          backgroundColor: irrigate ? const Color(0xFFFFE7E7) : const Color(0xFFE8F4EA),
+          child: Icon(
+            irrigate ? Icons.water_drop : Icons.check_circle_outline,
+            color: irrigate ? const Color(0xFFC94A4A) : const Color(0xFF239447),
+          ),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(decision.decision, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 4),
+              Text('Priority: ${decision.priority}', style: const TextStyle(fontWeight: FontWeight.w600)),
+              const SizedBox(height: 4),
+              Text(decision.reason, style: Theme.of(context).textTheme.bodyMedium),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
