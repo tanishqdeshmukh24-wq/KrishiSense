@@ -3,10 +3,11 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../models/decision_result_model.dart';
+import 'auth_service.dart';
 
 class DecisionService {
   DecisionService({
-    this.baseUrl = 'http://127.0.0.1:8000',
+    this.baseUrl = 'http://10.0.2.2:8000',
     this.accessToken,
   });
 
@@ -46,11 +47,13 @@ class DecisionService {
         : jsonDecode(response.body) as Map<String, dynamic>;
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
+      final detail = decoded['detail'];
       final error = decoded['error'];
-      final message = error is Map<String, dynamic>
-          ? (error['message']?.toString() ?? 'Decision request failed.')
-          : 'Decision request failed (${response.statusCode}).';
-      throw Exception(message);
+      final message = detail?.toString() ??
+          (error is Map<String, dynamic>
+              ? (error['message']?.toString() ?? 'Decision request failed.')
+              : 'Decision request failed (${response.statusCode}).');
+      throw ApiException(response.statusCode, message);
     }
 
     return DecisionResultModel.fromJson(decoded);
