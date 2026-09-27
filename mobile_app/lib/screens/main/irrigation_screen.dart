@@ -1,14 +1,79 @@
 import 'package:flutter/material.dart';
 
+import '../../data/models/decision_result_model.dart';
+import '../../data/services/decision_service.dart';
+
 class IrrigationScreen extends StatefulWidget {
-  const IrrigationScreen({super.key});
+  final String? zoneId;
+  final String? accessToken;
+  final String crop;
+  final String growthStage;
+  final String baseUrl;
+
+  const IrrigationScreen({
+    super.key,
+    this.zoneId,
+    this.accessToken,
+    this.crop = 'tomato',
+    this.growthStage = 'flowering',
+    this.baseUrl = 'http://127.0.0.1:8000',
+  });
 
   @override
   State<IrrigationScreen> createState() => _IrrigationScreenState();
 }
 
 class _IrrigationScreenState extends State<IrrigationScreen> {
-  bool _mockIrrigationEnabled = false;
+  DecisionResultModel? _decision;
+  String? _error;
+  bool _loading = false;
+
+  Future<void> _checkDecision() async {
+    final zoneId = widget.zoneId;
+
+    if (zoneId == null || zoneId.isEmpty) {
+      setState(() {
+        _decision = null;
+        _error = 'No zone is connected to this irrigation view.';
+      });
+      return;
+    }
+
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      final result = await DecisionService(
+        baseUrl: widget.baseUrl,
+        accessToken: widget.accessToken,
+      ).evaluate(
+        zoneId: zoneId,
+        crop: widget.crop,
+        growthStage: widget.growthStage,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _decision = result;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _decision = null;
+        _error = e.toString().replaceFirst('Exception: ', '');
+      });
+    } finally {
+      if (!mounted) return;
+
+      setState(() {
+        _loading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -46,88 +111,58 @@ class _IrrigationScreenState extends State<IrrigationScreen> {
               ],
             ),
           ),
-
           const SizedBox(height: 24),
-
           Text(
             'Current Status',
             style: Theme.of(context).textTheme.titleLarge,
           ),
-
           const SizedBox(height: 12),
-
           Card(
             child: Padding(
               padding: const EdgeInsets.all(18),
-              child: Row(
-                children: [
-                  const CircleAvatar(
-                    radius: 25,
-                    backgroundColor: Color(0xFFE8F4EA),
-                    child: Icon(
-                      Icons.check_circle_outline,
-                      color: Color(0xFF239447),
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'No Irrigation Required',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Soil moisture is currently within the optimal range.',
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+              child: _buildDecisionCard(),
             ),
           ),
-
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: _loading ? null : _checkDecision,
+              icon: _loading
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.auto_awesome),
+              label: Text(_loading ? 'Checking...' : 'Check Decision'),
+            ),
+          ),
           const SizedBox(height: 24),
-
           Text(
             'Irrigation Control',
             style: Theme.of(context).textTheme.titleLarge,
           ),
-
           const SizedBox(height: 12),
-
           Card(
-            child: SwitchListTile(
-              value: _mockIrrigationEnabled,
-              onChanged: (value) {
-                setState(() {
-                  _mockIrrigationEnabled = value;
-                });
-              },
-              title: const Text(
-                'Demo Control',
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
+            child: ListTile(
+              leading: const CircleAvatar(
+                backgroundColor: Color(0xFFE8F4EA),
+                child: Icon(
+                  Icons.settings_remote_outlined,
+                  color: Color(0xFF239447),
                 ),
               ),
-              subtitle: const Text(
-                'Mock control for the prototype. Hardware control will be connected through the backend.',
+              title: const Text(
+                'Backend-Controlled',
+                style: TextStyle(fontWeight: FontWeight.w600),
               ),
-              secondary: const Icon(
-                Icons.power_settings_new,
+              subtitle: const Text(
+                'The mobile app requests decisions from the backend. It does not communicate directly with the pump or ESP32.',
               ),
             ),
           ),
-
           const SizedBox(height: 20),
-
           Card(
             color: const Color(0xFFFFF8E7),
             child: Padding(
@@ -142,7 +177,7 @@ class _IrrigationScreenState extends State<IrrigationScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Prototype mode: the switch above does not control a real pump. Real irrigation commands will go through the backend and hardware integration layer.',
+                      'Decision logic stays in the backend. Hardware actuation will be connected through the backend and hardware integration layer.',
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ),
@@ -152,6 +187,111 @@ class _IrrigationScreenState extends State<IrrigationScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildDecisionCard() {
+    if (_loading) {
+      return const Row(
+        children: [
+          SizedBox(
+            width: 22,
+            height: 22,
+            child: CircularProgressIndicator(strokeWidth: 2.5),
+          ),
+          SizedBox(width: 12),
+          Expanded(
+            child: Text('Requesting the latest irrigation decision...'),
+          ),
+        ],
+      );
+    }
+
+    if (_error != null) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.error_outline,
+            color: Color(0xFFC94A4A),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(_error!),
+          ),
+        ],
+      );
+    }
+
+    final decision = _decision;
+
+    if (decision == null) {
+      return Text(
+        'Check the latest irrigation decision from the backend.',
+        style: Theme.of(context).textTheme.bodyMedium,
+      );
+    }
+
+    final irrigate = decision.decision == 'IRRIGATE';
+    final insufficient = decision.decision == 'INSUFFICIENT_DATA';
+
+    final icon = irrigate
+        ? Icons.water_drop
+        : insufficient
+            ? Icons.help_outline
+            : Icons.check_circle_outline;
+
+    final iconColor = irrigate
+        ? const Color(0xFFC94A4A)
+        : insufficient
+            ? const Color(0xFF9A6A00)
+            : const Color(0xFF239447);
+
+    final backgroundColor = irrigate
+        ? const Color(0xFFFFE7E7)
+        : insufficient
+            ? const Color(0xFFFFF3DD)
+            : const Color(0xFFE8F4EA);
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        CircleAvatar(
+          radius: 25,
+          backgroundColor: backgroundColor,
+          child: Icon(
+            icon,
+            color: iconColor,
+          ),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                decision.decision,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Priority: ${decision.priority}',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                decision.reason,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
