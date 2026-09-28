@@ -6,45 +6,48 @@
 SENSE → CAPTURE → ANALYZE → PREDICT → RECOMMEND → ACT → VERIFY
 ```
 
-## IoT workflow
+## IoT / Irrigation Workflow
 
 ```text
 Soil Moisture Sensor
         ↓
       ESP32
         ↓
-Hardware Integration
+      Wi-Fi
         ↓
-     Backend
+FastAPI Backend
         ↓
     Database
         ↓
  Decision Engine
         ↓
- Recommendation
+IRRIGATE / WAIT /
+INSUFFICIENT_DATA
         ↓
-   Mobile App
+   Farmer App
 ```
 
-## AI workflow
+## AI Workflow — Current MVP
 
 ```text
 Farmer captures crop/leaf image
         ↓
-     Mobile App
+     Flutter App
         ↓
-      Backend
+   Resize / Preprocess
         ↓
-      AI Model
+  Local TFLite Model
         ↓
 Prediction + Confidence
         ↓
- Recommendation
+Advisory Result
         ↓
-     Mobile App
+     Flutter App
 ```
 
-## Optional actuation workflow
+The current AI model runs on-device. A backend AI inference service is not required for this path.
+
+## Optional Actuation Workflow
 
 ```text
 Decision Engine
@@ -55,15 +58,27 @@ Hardware Integration
       ↓
      ESP32
       ↓
-Safe Relay/Controller
+Safe Relay / Controller
       ↓
      Pump
       ↓
-Verification/Status
-      ↓
-    Backend
+Verification / Status
 ```
 
-## Prototype demonstration
+## Feedback Loop
 
-The primary demonstrable pipeline is one physical ESP32 with one soil-moisture sensor. The software architecture is multi-node and zone-based.
+```text
+New Sensor Reading / New Image
+            ↓
+       Updated Result
+            ↓
+       Farmer Action
+            ↓
+       New Observation
+```
+
+This creates the architecture for verification and future improvement without claiming that an automated machine-learning retraining loop is already implemented.
+
+## Prototype Demonstration
+
+The primary physical demonstrable pipeline is one ESP32 with one soil-moisture sensor. The software architecture remains multi-node, zone-based and expandable to additional crops, sensors and field inputs.

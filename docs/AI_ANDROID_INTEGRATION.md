@@ -2,17 +2,15 @@
 
 ## 1. Purpose
 
-This document defines the fixed interface between the KrishiSense on-device AI model and the Android mobile application.
+This document defines the fixed interface between the KrishiSense on-device AI model and the Flutter Android application.
 
-The Android application will run crop-health image inference locally using the TensorFlow Lite model.
-
-Internet connectivity is not required for model inference.
+The Android application runs crop-health image inference locally using TensorFlow Lite. Internet connectivity is not required for model inference.
 
 ## 2. Model
 
 Model file:
 
-krishisense_tomato_final.tflite
+`krishisense_tomato_final.tflite`
 
 Model type:
 
@@ -36,60 +34,59 @@ Output:
 
 ## 3. Supported Tomato Classes
 
-The output class order is fixed and must not be changed.
+The output class order is fixed:
 
-0 - bacterial_spot
-1 - early_blight
-2 - healthy
-3 - late_blight
-4 - leaf_mold
-5 - septoria_leaf_spot
-6 - spider_mites_two_spotted_spider_mite
-7 - target_spot
-8 - tomato_mosaic_virus
+0 - bacterial_spot  
+1 - early_blight  
+2 - healthy  
+3 - late_blight  
+4 - leaf_mold  
+5 - septoria_leaf_spot  
+6 - spider_mites_two_spotted_spider_mite  
+7 - target_spot  
+8 - tomato_mosaic_virus  
 9 - tomato_yellow_leaf_curl_virus
 
 ## 4. Inference Pipeline
 
-The expected pipeline is:
-
-Camera/Gallery Image
-↓
-Image Resize
-↓
-224 × 224
-↓
+```text
+Camera / Gallery Image
+        ↓
+Image Decode
+        ↓
+Resize to 224 × 224
+        ↓
 RGB Conversion
-↓
+        ↓
 Float32 Conversion
-↓
-MobileNetV2 Preprocessing
-↓
+        ↓
+RAW RGB 0–255 input
+        ↓
 TFLite Model
-↓
+        ↓
 10-Class Probability Output
-↓
+        ↓
 Highest Probability Class
-↓
+        ↓
 Confidence
-↓
-Recommendation
+        ↓
+Recommendation / Explanation
+```
 
-## 5. Image Preprocessing
+## 5. Critical Preprocessing Rule
 
-The Android implementation must:
+The current exported TFLite graph already contains the preprocessing used by the trained model.
 
-1. Load the selected image.
-2. Resize it to 224 × 224 pixels.
-3. Convert the image to RGB.
-4. Convert pixel values to float32.
-5. Apply MobileNetV2 preprocessing.
+Therefore the Flutter application must pass **raw RGB pixel values in the 0–255 range** after resizing to 224 × 224.
 
-MobileNetV2 preprocessing:
+Do **not** additionally apply:
 
-pixel = (pixel / 127.5) - 1.0
+- `pixel / 255`
+- `(pixel / 127.5) - 1.0`
+- ImageNet normalization
+- BGR channel swapping
 
-The same preprocessing used during model training must be used during Android inference.
+Double preprocessing was experimentally verified to change model predictions substantially.
 
 ## 6. Model Output
 
@@ -99,125 +96,102 @@ The highest probability determines the predicted class.
 
 Example:
 
+```text
 Prediction: early_blight
-
 Confidence: 87%
+```
 
-Confidence should be displayed as a percentage.
+Confidence should be displayed as a percentage, while making clear that model confidence is not absolute certainty.
 
 ## 7. User-Friendly Class Names
 
 The raw model class names should not be shown directly to farmers.
 
-bacterial_spot → Bacterial Spot
-
-early_blight → Early Blight
-
-healthy → Healthy
-
-late_blight → Late Blight
-
-leaf_mold → Leaf Mold
-
-septoria_leaf_spot → Septoria Leaf Spot
-
-spider_mites_two_spotted_spider_mite → Spider Mites
-
-target_spot → Target Spot
-
-tomato_mosaic_virus → Tomato Mosaic Virus
-
-tomato_yellow_leaf_curl_virus → Tomato Yellow Leaf Curl Virus
+- bacterial_spot → Bacterial Spot
+- early_blight → Early Blight
+- healthy → Healthy
+- late_blight → Late Blight
+- leaf_mold → Leaf Mold
+- septoria_leaf_spot → Septoria Leaf Spot
+- spider_mites_two_spotted_spider_mite → Spider Mites
+- target_spot → Target Spot
+- tomato_mosaic_virus → Tomato Mosaic Virus
+- tomato_yellow_leaf_curl_virus → Tomato Yellow Leaf Curl Virus
 
 ## 8. Confidence Handling
 
-The Android app must display the model confidence along with the prediction.
-
-Example:
-
-Prediction: Late Blight
-Confidence: 91%
+The Android app should display model confidence with the prediction.
 
 Confidence should not be treated as absolute certainty.
 
-Recommended interpretation:
+The UI may use configured thresholds to distinguish high-, medium- and low-confidence results. Low-confidence or ambiguous results should encourage the farmer to capture a clearer image or seek appropriate crop-management guidance.
 
-- High confidence: show the prediction normally.
-- Medium confidence: show the prediction with an uncertainty notice.
-- Low confidence: ask the farmer to capture another clear image.
+Suggested message:
 
-Suggested low-confidence message:
+```text
+AI confidence is low. Please capture a clearer image of the affected leaf.
+```
 
-"AI confidence is low. Please capture a clearer image of the affected leaf."
-
-The exact confidence thresholds can be configured during implementation and must be documented.
+Thresholds must be documented when finalized.
 
 ## 9. Recommendation Mapping
 
-The Android app should map the predicted class to a simple farmer-friendly recommendation.
+Recommendations should be farmer-friendly and advisory.
 
 Example:
 
-Early Blight:
-"Remove severely affected leaves and follow recommended crop-protection practices. Consult local agricultural guidance before applying pesticides."
+```text
+Prediction: Early Blight
 
-Late Blight:
-"Remove severely affected plant material and monitor nearby plants. Follow locally recommended disease-control practices."
+Recommendation:
+Remove severely affected leaves and follow recommended crop-protection
+practices. Consult local agricultural guidance before applying pesticides.
+```
 
-Bacterial Spot:
-"Remove heavily affected leaves and avoid unnecessary leaf wetness. Follow recommended crop-protection practices."
-
-Healthy:
-"No major visual issue detected by the AI model. Continue regular crop monitoring."
-
-For other classes, recommendations should be added using the same structure.
-
-Recommendations are advisory and must not be presented as guaranteed cures.
+Recommendations are not guaranteed cures or guaranteed diagnoses.
 
 ## 10. AI Result Object
 
-The Android AI module should return a structured result.
+The Android AI module should return a structured result such as:
 
-Example:
-
+```json
 {
-    "prediction": "early_blight",
-    "displayName": "Early Blight",
-    "confidence": 0.87,
-    "confidencePercent": 87,
-    "recommendation": "Remove severely affected leaves and monitor the crop.",
-    "isLowConfidence": false
+  "prediction": "early_blight",
+  "displayName": "Early Blight",
+  "confidence": 0.87,
+  "confidencePercent": 87,
+  "recommendation": "Remove severely affected leaves and monitor the crop.",
+  "isLowConfidence": false
 }
-
-The UI should use this result to display the AI analysis screen.
+```
 
 ## 11. Offline Requirement
 
-The TFLite model must be packaged with the Android application.
-
-The model must not be downloaded from the internet during inference.
+The TFLite model is packaged with the Android application.
 
 Required flow:
 
+```text
 Android App
-↓
+   ↓
 Local TFLite Model
-↓
+   ↓
 Local Inference
-↓
+   ↓
 Prediction
-↓
+   ↓
 Confidence
-↓
+   ↓
 Recommendation
+```
 
-Internet connectivity is therefore not required for the AI inference itself.
+Internet connectivity is therefore not required for AI inference.
 
-Backend communication may still require internet depending on the feature being used.
+Backend communication may still require connectivity for sensor data, stored results, recommendations or other server-backed features.
 
 ## 12. Current Implementation Boundary
 
-The AI module is responsible for:
+The AI/mobile inference layer is responsible for:
 
 - Loading the TFLite model.
 - Loading class labels.
@@ -227,127 +201,87 @@ The AI module is responsible for:
 - Calculating/displaying confidence.
 - Returning the structured AI result.
 
-The AI module is NOT responsible for:
+It is **not** responsible for:
 
-- Android UI design.
-- Database management.
 - ESP32 communication.
 - Pump control.
 - General backend functionality.
+- Database ownership.
 
-The Android UI should consume the AI result through a clean interface.
+The mobile UI consumes the local AI result.
 
-## 13. Android Model File Location
+## 13. Model File Location
 
-The TFLite model should be packaged inside the Android application.
+The model and class-label file should be packaged inside the Android application according to the Flutter project's asset configuration.
 
-Recommended location:
+The expected assets are:
 
-mobile_app/app/src/main/assets/krishisense_tomato_final.tflite
+```text
+krishisense_tomato_final.tflite
+krishisense_tomato_classes.txt
+```
 
-The class-label file should also be packaged with the application:
+The application must load both files locally.
 
-mobile_app/app/src/main/assets/krishisense_tomato_classes.txt
-
-The Android application must load both files locally.
-
-## 14. Model Loading
-
-The Android application should:
-
-1. Load the TFLite model from the assets folder.
-2. Create the TFLite interpreter.
-3. Load the class labels.
-4. Prepare the input tensor.
-5. Run inference.
-6. Read the output tensor.
-7. Find the class with the highest probability.
-8. Return the prediction and confidence.
-
-The model should be loaded efficiently and reused rather than recreated for every image.
-
-## 15. Error Handling
+## 14. Error Handling
 
 The AI module must safely handle:
 
-- Missing model file.
-- Missing label file.
-- Invalid image.
-- Unsupported image format.
-- Image preprocessing failure.
-- TFLite interpreter errors.
-- Empty model output.
+- Missing model file
+- Missing label file
+- Invalid image
+- Unsupported image format
+- Image preprocessing failure
+- TFLite interpreter errors
+- Empty model output
 
 The app should show a user-friendly error instead of crashing.
 
-Example:
+## 15. Testing Requirements
 
-"Unable to analyze this image. Please try again."
+Test at minimum:
 
-## 16. Testing Requirements
-
-Before considering AI → Android integration complete, test:
-
-1. A known test image.
-2. A healthy tomato leaf.
+1. Known held-out tomato image.
+2. Healthy tomato leaf.
 3. Multiple disease images.
-4. A low-quality image.
-5. An unrelated image.
-6. The app with internet disabled.
+4. Low-quality image.
+5. Unrelated/out-of-scope image.
+6. AI inference with internet disabled.
 
-The prediction and confidence should be displayed correctly.
+The model should be validated on known test data and should not be described as guaranteed real-world field accuracy.
 
-The offline test must confirm that the model can perform inference without an internet connection.
-
-## 17. Verified Model Information
+## 16. Verified Model Information
 
 Current verified model:
 
-Model:
-KrishiSense Tomato MobileNetV2
-
-Model format:
-TensorFlow Lite
-
-Input:
-224 × 224 × 3 float32
-
-Output:
-10-class float32 probability vector
-
-Model size:
-Approximately 8.5 MB
-
-Held-out test accuracy:
-91.93%
-
-Keras vs TFLite prediction match:
-100%
+- Model: KrishiSense Tomato MobileNetV2
+- Format: TensorFlow Lite
+- Input: 224 × 224 × 3 float32
+- Output: 10-class float32 probability vector
+- Size: approximately 8.5 MB
+- Held-out test accuracy: **91.93%**
+- Keras vs TFLite prediction match: **100%**
 
 These metrics were measured on the project's held-out tomato test dataset.
 
-They should not be presented as guaranteed real-world field accuracy.
-
-## 18. Prototype Scope
+## 17. Prototype Scope
 
 The current SIH prototype focuses on tomato crop-health analysis.
 
-The model currently supports 10 tomato classes.
+The model supports 10 tomato classes.
 
-Multi-crop AI support is a future scalability direction and is not part of the current trained model.
+Multi-crop AI is a future scalability direction and is not part of the current trained model.
 
-The Android implementation must therefore use the current tomato model without changing its class order or input specification.
+## 18. Integration Completion Criteria
 
-## 19. Integration Completion Criteria
+AI → Android integration is complete when:
 
-AI → Android integration is considered complete when:
-
-- [ ] TFLite model is inside the Android project.
-- [ ] Class-label file is inside the Android project.
-- [ ] TFLite interpreter loads successfully.
+- [ ] TFLite model is packaged in the Flutter app.
+- [ ] Class-label file is packaged.
+- [ ] Interpreter loads successfully.
 - [ ] Camera/gallery image can be selected.
 - [ ] Image is resized to 224 × 224.
-- [ ] Correct preprocessing is applied.
+- [ ] RGB input is passed as raw 0–255 float32 values.
 - [ ] Inference runs successfully.
 - [ ] Prediction is displayed.
 - [ ] Confidence is displayed.
@@ -355,10 +289,10 @@ AI → Android integration is considered complete when:
 - [ ] Invalid input is handled safely.
 - [ ] Inference works with internet disabled.
 
-## 20. Important Rule
+## 19. Important Rule
 
-Do not modify the trained model, class order, input size, or preprocessing without coordinating with the AI/ML owner.
+Do not modify the trained model, class order, input size or preprocessing without coordinating with the AI/ML owner.
 
-Any change to the AI interface must be documented in this file and communicated to the Android developer.
+Any change to the AI interface must be documented here and communicated to the mobile developer.
 
 This document defines the current AI → Android integration contract for the KrishiSense SIH26180 prototype.

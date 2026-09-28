@@ -1,24 +1,43 @@
 # KrishiSense Offline / Low-Connectivity Design
 
-KrishiSense is intended for poor-connectivity environments. The prototype should distinguish between implemented and planned offline features.
+KrishiSense is designed for agricultural environments where connectivity may be intermittent. The repository distinguishes **implemented offline capability** from planned synchronization features.
 
-## Current principle
-- ESP32 detects network loss and retries communication.
-- Backend accepts readings when connectivity is available.
-- Mobile app should show stale/unavailable data clearly rather than inventing values.
+## Implemented Today
 
-## Planned synchronization
+### On-device AI
+
+The tomato TFLite model runs locally inside the Flutter application.
 
 ```text
-Offline reading/data
-      ↓
-Local storage/buffer
-      ↓
+Camera → Flutter → TFLite
+```
+
+Therefore, the current AI inference path does not require an internet connection or backend AI service.
+
+### IoT Connectivity
+
+The ESP32 currently communicates with the FastAPI backend over Wi-Fi. If connectivity is unavailable, backend delivery cannot occur until communication is restored.
+
+The application should show unavailable/stale sensor information rather than inventing readings.
+
+## Planned / Expandable Synchronization
+
+A richer low-connectivity implementation can add local buffering and store-and-forward:
+
+```text
+Offline sensor/data
+       ↓
+Local buffer
+       ↓
 Connectivity restored
-      ↓
+       ↓
 Synchronization
-      ↓
+       ↓
 Backend
 ```
 
-Complete offline synchronization and offline AI should only be marked implemented after they are actually tested.
+This should only be marked as fully implemented after it is tested end-to-end.
+
+## Design Principle
+
+Offline AI and offline data synchronization are separate capabilities. KrishiSense currently has **local AI inference**; broader offline synchronization remains an area for continued development.
