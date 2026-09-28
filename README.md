@@ -2,8 +2,6 @@
 
 ## AI + IoT Based Smart Farming Assistant
 
-**SIH Problem Statement: SIH26180**
-
 KrishiSense is a field-deployable smart farming prototype combining IoT-based soil monitoring, on-device AI-assisted crop-health analysis, a transparent decision engine, and a farmer-facing mobile application.
 
 > **Current MVP:** 1 ESP32 + 1 soil-moisture sensor, Flutter Android app, a 10-class tomato TFLite model, irrigation decision logic, and Python/FastAPI backend integration. Additional sensors, crops and advanced automation are scalable extensions.
@@ -108,23 +106,14 @@ Decision → Backend → Hardware Integration → ESP32
 ```text
 KrishiSense/
 ├── README.md
-├── mobile_app/          # Tanush - farmer-facing application
-├── backend/             # Ninad - core backend and database
-├── ai/                  # Tanishq - AI/ML
-├── decision_engine/     # Tanishq - irrigation/recommendation logic
-├── hardware/            # AdiKul - ESP32 and physical integration
-├── docs/                # Shared architecture, contracts and testing
-└── demo/                # Screenshots, sample data and demo evidence
+├── mobile_app/          # farmer-facing application
+├── backend/             # core backend and database
+├── ai/                  # AI/ML
+├── decision_engine/     # irrigation/recommendation logic
+├── hardware/            # ESP32 and physical integration
+├── docs/                # shared architecture, contracts and testing
+└── demo/                # screenshots, sample data and demo evidence
 ```
-
-## Team Ownership
-
-| Member | Responsibility |
-|---|---|
-| AdiKul | ESP32, soil-moisture hardware, hardware communication and hardware-integrated backend |
-| Ninad | Core backend, database and general APIs |
-| Tanush | Mobile app, UI/UX and backend API consumption |
-| Tanishq | AI/ML, crop-health analysis and decision engine |
 
 ## Farm Hierarchy
 
