@@ -33,3 +33,10 @@ ai/data/*
 # OS files
 .DS_Store
 Thumbs.db
+# Secrets / local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*credentials*.json
