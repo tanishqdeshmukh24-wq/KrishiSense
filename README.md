@@ -4,9 +4,9 @@
 
 **SIH Problem Statement: SIH26180**
 
-KrishiSense is a field-deployable smart farming prototype combining IoT-based soil monitoring, AI-assisted crop-health analysis, and a transparent decision engine to provide timely and actionable recommendations to farmers.
+KrishiSense is a field-deployable smart farming prototype combining IoT-based soil monitoring, on-device AI-assisted crop-health analysis, a transparent decision engine, and a farmer-facing mobile application.
 
-> **Prototype status:** The current physical prototype uses **1 ESP32 + 1 soil-moisture sensor**. Other sensors and advanced capabilities are future extensions and are not claimed as currently implemented.
+> **Current MVP:** 1 ESP32 + 1 soil-moisture sensor, Flutter Android app, a 10-class tomato TFLite model, irrigation decision logic, and Python/FastAPI backend integration. Additional sensors, crops and advanced automation are scalable extensions.
 
 ## Core Workflow
 
@@ -14,7 +14,7 @@ KrishiSense is a field-deployable smart farming prototype combining IoT-based so
 SENSE → CAPTURE → ANALYZE → PREDICT → RECOMMEND → ACT → VERIFY
 ```
 
-## Working Prototype Flows
+## Current Working Flows
 
 ### IoT / Irrigation
 
@@ -23,67 +23,84 @@ Soil Moisture Sensor
         ↓
       ESP32
         ↓
-Hardware Integration
+   FastAPI Backend
         ↓
-     Backend
-        ↓
-  Database / Data
+     Database
         ↓
  Decision Engine
         ↓
-Irrigation Recommendation
+ Recommendation / Decision
         ↓
-   Mobile App
+   Farmer App
 ```
+
+The architecture also supports an irrigation command path:
+
+```text
+Decision → Backend → Hardware Integration → ESP32
+        → Safe Relay/Controller → Pump
+```
+
+Actual pump actuation is treated as a hardware-integration step and must use a safe relay/controller; ESP32 GPIO must never drive a farm mains motor directly.
 
 ### AI Crop Analysis
 
 ```text
-Crop/Leaf Image
+Farmer Camera
       ↓
- Mobile App
+Flutter App
       ↓
-   Backend
+Preprocessing
       ↓
-  AI Model
+Tomato TFLite Model (on-device)
       ↓
 Prediction + Confidence
       ↓
-Recommendation
+Recommendation / Explanation
       ↓
- Mobile App
+Flutter App
 ```
+
+The current AI inference runs locally on the Android device. It does **not** require a backend AI inference call.
 
 ## System Architecture
 
 ```text
-                         FARMER
-                           │
-                           ▼
-                  ┌─────────────────┐
-                  │   MOBILE APP    │
-                  │     Tanush      │
-                  └────────┬────────┘
-                           │ REST / HTTPS
-                           ▼
-                  ┌─────────────────┐
-                  │     BACKEND     │
-                  │     Ninad       │
-                  │ API + Database  │
-                  └───────┬─┬───────┘
-                          │ │
-              ┌───────────┘ └────────────┐
-              ▼                          ▼
-      ┌─────────────────┐        ┌─────────────────┐
-      │ AI + DECISION   │        │    HARDWARE     │
-      │     Tanishq     │        │     AdiKul      │
-      └─────────────────┘        └────────┬────────┘
-                                         ▼
-                                  ┌─────────────┐
-                                  │    ESP32    │
-                                  └──────┬──────┘
-                                         ▼
-                                Soil Moisture Sensor
+FIELD / IOT
+ESP32 + Soil Sensor
+        │
+        │ sensor readings
+        ▼
+BACKEND / DATA LAYER
+FastAPI + Database
+        │
+        ├──────────────► Sensor history / node status
+        │
+        └──────────────► Decision Engine
+                              │
+                              ▼
+                       IRRIGATE / WAIT /
+                       INSUFFICIENT_DATA
+                              │
+                              ▼
+                         Farmer App
+
+FARMER CAMERA
+      │
+      ▼
+Flutter App
+      │
+      ▼
+Local TFLite AI
+      │
+      ▼
+Prediction + Confidence
+      │
+      └──────────────► Farmer App
+
+Optional actuation:
+Decision → Backend → Hardware Integration → ESP32
+        → Safe Relay/Controller → Pump
 ```
 
 ## Repository Structure
@@ -118,27 +135,34 @@ Farmer
             └── Zone
                  ├── Node 01
                  ├── Node 02
-                 └── ...
+                 └── ... Node N
 ```
 
-A node is **not tied to one acre**. Nodes can be strategically placed by zone, and the software supports adding, removing or reassigning nodes without changing the core application architecture.
+A node is **not tied to one acre**. Nodes are strategically placed by zone. Multiple nodes can belong to a zone, and nodes can be added, removed or reassigned without changing the core application architecture.
 
 ## Current MVP
 
-- ESP32 + soil-moisture sensor prototype
-- Sensor data transmission to backend
-- Dynamic node/zone data model
-- Node online/offline tracking
-- Irrigation decision based primarily on soil moisture
-- Farmer mobile dashboard
-- AI-assisted crop-image analysis prototype
-- Recommendation and alert interfaces
+- ESP32 + soil-moisture sensor
+- Sensor data transmission to the Python/FastAPI backend
+- Node identity, zone mapping and online/offline tracking
+- Transparent irrigation decision logic
+- Flutter Android farmer application
+- On-device tomato disease classification using TFLite
+- 10 tomato classes
+- Verified TFLite test accuracy: **91.93%** on the held-out test set
+- Prediction confidence and advisory result presentation
 
-## Future Extensions
+## Scalable / Future Extensions
 
-Temperature/humidity, light, pH, EC, weather services, LoRa communication, expanded crop-health/pest analysis, richer offline synchronization and larger deployments can be added later.
+- Temperature/humidity, light, pH and EC sensors
+- Field-node camera for plant growth/disease monitoring
+- Multi-crop AI models
+- Weather and climate-risk inputs
+- Richer offline synchronization/store-and-forward
+- LoRa or other low-power wide-area communication
+- Expanded fertilizer, pest and crop-protection recommendations
 
-These are **future extensions**, not claims about the current physical prototype.
+These are intentionally separated from the current MVP so the repository remains technically honest while preserving the scalable architecture.
 
 ## Documentation
 
@@ -154,4 +178,4 @@ These are **future extensions**, not claims about the current physical prototype
 
 ## Prototype Principle
 
-Build a small, testable and honest working prototype. Do not claim unimplemented functionality. Components must integrate through the shared contracts in `docs/`.
+Build a small, testable and honest working prototype. Current implementation status and future architecture must always be distinguished. Shared interfaces should be documented before integration changes.
