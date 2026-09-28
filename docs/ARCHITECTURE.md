@@ -1,55 +1,71 @@
-# KrishiSense Shared Architecture
+# KrishiSense System Architecture
 
 ## Purpose
-This document is the source of truth for the four-person prototype team. Team members must follow this architecture unless a change is explicitly agreed and documented.
 
-## Team Ownership
-- **AdiKul:** ESP32, soil-moisture hardware, hardware communication, hardware-integrated backend.
-- **Ninad:** Core backend, database, general APIs and data services.
-- **Tanush:** Mobile application, UI/UX and API consumption.
-- **Tanishq:** AI/ML and decision engine.
+This document is the architecture source of truth for KrishiSense. It separates the **current MVP implementation** from the **scalable/future architecture** so the system can continue evolving after SIH submission without making the repository misleading.
 
-## System
+## High-Level Architecture
 
 ```text
-                         FARMER
-                           │
-                           ▼
-                  ┌─────────────────┐
-                  │   MOBILE APP    │
-                  │     Tanush      │
-                  └────────┬────────┘
-                           │ REST / HTTPS
-                           ▼
-                  ┌─────────────────┐
-                  │     BACKEND     │
-                  │     Ninad       │
-                  │ API + Database  │
-                  └───────┬─┬───────┘
-                          │ │
-              ┌───────────┘ └────────────┐
-              ▼                          ▼
-      ┌─────────────────┐        ┌─────────────────┐
-      │ AI + DECISION   │        │    HARDWARE     │
-      │     Tanishq     │        │     AdiKul      │
-      └─────────────────┘        └────────┬────────┘
-                                         ▼
-                                  ┌─────────────┐
-                                  │    ESP32    │
-                                  └──────┬──────┘
-                                         ▼
-                                Soil Moisture Sensor
+┌──────────────────────┐
+│ FIELD / IOT LAYER    │
+│ ESP32 + Soil Sensor  │
+└──────────┬───────────┘
+           │ Sensor Data
+           ▼
+┌──────────────────────┐
+│ BACKEND / DATA LAYER │
+│ FastAPI + Database   │
+│ Auth + Node Mgmt     │
+└───────┬────────┬─────┘
+        │        │
+        │        └──────────────────────┐
+        │                               │
+        ▼                               ▼
+┌───────────────────┐          ┌────────────────────┐
+│ DECISION ENGINE   │          │ FARMER APP         │
+│ Sensor/context    │          │ Flutter            │
+│ Rule-based logic  │          │ Field + AI UI      │
+└─────────┬─────────┘          └─────────┬──────────┘
+          │                              │
+          │ Decision                     │ Camera Image
+          ▼                              ▼
+┌───────────────────┐          ┌────────────────────┐
+│ RECOMMENDATION    │          │ LOCAL TFLITE AI    │
+│ IRRIGATE / WAIT / │          │ Tomato classifier  │
+│ INSUFFICIENT_DATA │          │ On-device inference│
+└─────────┬─────────┘          └─────────┬──────────┘
+          │                              │
+          └──────────────┬───────────────┘
+                         ▼
+                Farmer action / feedback
+                         │
+                         ▼
+                    New field data
 ```
 
-## Non-negotiable boundaries
-1. Mobile App does not communicate directly with ESP32.
-2. AI does not directly control a pump.
-3. Decision Engine does not directly communicate with ESP32.
-4. There is one shared backend, not separate backends.
-5. Ninad owns general backend functionality; AdiKul owns hardware-facing backend integration.
-6. The physical MVP is one ESP32 + one soil-moisture sensor.
-7. The software supports multiple dynamically registered nodes and zones.
-8. Unimplemented sensors/features must not be presented as working features.
+## Current MVP
+
+The current physical and software prototype consists of:
+
+- **Hardware:** 1 ESP32 + 1 soil-moisture sensor.
+- **Mobile:** Flutter Android application.
+- **AI:** MobileNetV2-based 10-class tomato classifier exported to TFLite.
+- **Decision Engine:** transparent soil-moisture-based irrigation logic.
+- **Backend:** Python/FastAPI APIs and database for sensor/data integration.
+- **Connectivity:** ESP32 uses Wi-Fi for backend communication; AI inference runs locally on the phone.
+
+## Non-Negotiable Boundaries
+
+1. The mobile app does not communicate directly with the ESP32.
+2. Current AI inference runs locally in Flutter/TFLite and does not require a backend AI inference request.
+3. AI does not directly control a pump.
+4. The Decision Engine does not directly communicate with the ESP32.
+5. The backend is the integration layer for sensor data, decisions and hardware-facing commands.
+6. There is one shared backend and one shared API contract.
+7. The physical MVP is one ESP32 + one soil-moisture sensor.
+8. Software must support multiple dynamically registered nodes and zones.
+9. Future sensors/features must not be presented as currently implemented.
 
 ## Farm Hierarchy
 
@@ -57,35 +73,78 @@ This document is the source of truth for the four-person prototype team. Team me
 Farmer → Farm → Field → Zone → Sensor Node
 ```
 
-A zone may contain multiple nodes. Nodes can be added, removed or reassigned.
+A zone may contain multiple nodes. A node is not equivalent to an acre. Node placement is a deployment decision based on field/zone conditions.
 
 ## Main Data Flows
 
-### Sensor flow
+### Sensor Flow
+
 ```text
-Sensor → ESP32 → Hardware Integration → Backend → Database
+Soil Sensor → ESP32 → Wi-Fi → FastAPI → Database
 ```
 
-### Decision flow
+### Irrigation Decision Flow
+
 ```text
-Sensor Data → Backend → Decision Engine → Recommendation → Backend → Mobile App
+Latest Sensor Data
+        ↓
+Backend
+        ↓
+Decision Engine
+        ↓
+IRRIGATE / WAIT / INSUFFICIENT_DATA
+        ↓
+Recommendation / Farmer App
 ```
 
-### AI flow
+### AI Flow — Current MVP
+
 ```text
-Mobile Image → Backend → AI → Prediction + Confidence → Backend → Mobile App
+Farmer Camera
+      ↓
+Flutter App
+      ↓
+Preprocessing
+      ↓
+TFLite Model
+      ↓
+Prediction + Confidence
+      ↓
+Farmer App / Recommendation
 ```
 
-### Optional actuation flow
+### Optional Actuation Flow
+
 ```text
-Decision → Backend → Hardware Integration → ESP32 → Safe Controller → Pump
+Decision
+   ↓
+Backend
+   ↓
+Hardware Integration
+   ↓
+ESP32
+   ↓
+Safe Relay / Controller
+   ↓
+Pump
 ```
 
-## Current Hardware
-- ESP32
-- Soil-moisture sensor
+The ESP32 must not directly drive farm mains equipment from a GPIO pin.
 
-Temperature, humidity, pH, EC, light, LoRa and other sensors are future extensions.
+## Scalable Architecture
+
+The architecture can later add:
+
+- additional environmental sensors
+- field-node cameras
+- multi-crop models
+- weather/climate-risk data
+- richer offline synchronization
+- LoRa/other low-power communication
+- expanded recommendation and automation modules
+
+These extensions use the same Farm → Field → Zone → Node hierarchy and shared backend contract.
 
 ## Design Principle
-Each component must be independently testable. When another component is unavailable, use a mock that follows the shared API contract rather than inventing a different architecture.
+
+Every component should be independently testable. When a dependency is unavailable, use a mock that follows the shared contract rather than creating a parallel architecture.
